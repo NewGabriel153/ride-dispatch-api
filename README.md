@@ -55,20 +55,20 @@ containerized on **PostgreSQL + PostGIS**.
 
 ## Quick Start (Docker)
 
-This is the recommended path. It provisions PostGIS and the web app with a single
-command — no local Python or GDAL setup required.
+This is the recommended path. It provisions PostGIS and the API service with a
+single command — no local Python or GDAL setup required.
 
 **Prerequisites:** Docker and Docker Compose.
 
 ```bash
-# 1. Build and start the database + web service
+# 1. Build and start the database + api service
 docker compose up --build
 
 # 2. In a second terminal, apply migrations
-docker compose exec web python manage.py migrate
+docker compose exec api python manage.py migrate
 
 # 3. Create an admin user (see note below about the `role` field)
-docker compose exec web python manage.py createsuperuser
+docker compose exec api python manage.py createsuperuser
 ```
 
 Once running:
@@ -81,6 +81,22 @@ Once running:
 > **Important:** The `rides` endpoint is restricted to users whose `role == "admin"`.
 > `createsuperuser` sets `role="admin"` automatically (see `UserManager.create_superuser`),
 > so a superuser can access everything out of the box.
+
+### Scaling the API service
+
+The `api` service is scale-ready — it has no fixed `container_name`, and its host
+ports are published as a range (`8000-8010:8000`), so replicas bind distinct host
+ports instead of colliding:
+
+```bash
+# Run 3 API replicas (reachable on 8000, 8001, 8002)
+docker compose up --scale api=3
+```
+
+> For real horizontal scaling in production, front the replicas with a reverse
+> proxy / load balancer (e.g. nginx or Traefik) on a single public port and swap
+> `runserver` for a WSGI server such as gunicorn (see
+> [Known Limitations](#known-limitations--future-work)).
 
 ---
 
@@ -309,7 +325,7 @@ ride-dispatch-api/
 │   ├── migrations/
 │   └── tests.py             # (placeholder — see limitations)
 ├── Dockerfile               # Python 3.12 + GDAL/PROJ system deps
-├── docker-compose.yml       # web + PostGIS services
+├── docker-compose.yml       # api + PostGIS services
 ├── requirements.txt
 └── manage.py
 ```
@@ -441,9 +457,9 @@ tooling and the API stay in sync.
 
 ```bash
 # Docker
-docker compose exec web python manage.py migrate
-docker compose exec web python manage.py createsuperuser
-docker compose exec web python manage.py makemigrations
+docker compose exec api python manage.py migrate
+docker compose exec api python manage.py createsuperuser
+docker compose exec api python manage.py makemigrations
 
 # Local
 python manage.py migrate

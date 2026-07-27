@@ -15,14 +15,16 @@ services:
       timeout: 5s
       retries: 5
 
-  web:
+  api:
     build: .
     user: "1000:1000"
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      # Host-port range lets multiple replicas bind distinct ports
+      # (first instance -> 8000, next -> 8001, ...). Enables `--scale api=N`.
+      - "8000-8010:8000"
     environment:
       POSTGRES_DB: dispatch
       POSTGRES_USER: dispatch
