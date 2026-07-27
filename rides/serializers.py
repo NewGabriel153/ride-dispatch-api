@@ -29,8 +29,9 @@ class RideEventSerializer(serializers.ModelSerializer):
 class RideSerializer(serializers.ModelSerializer):
     rider = UserSerializer(source="id_rider", read_only=True)
     driver = UserSerializer(source="id_driver", read_only=True)
-    events = RideEventSerializer(many=True, read_only=True)
-    # Populated in-memory via Prefetch(to_attr="todays_ride_events") in the ViewSet.
+    # Only the last-24h events from Prefetch(to_attr="todays_ride_events").
+    # Intentionally omits the all-time `events` reverse relation to avoid N+1
+    # and unbounded payload growth.
     todays_ride_events = RideEventSerializer(many=True, read_only=True)
 
     class Meta:
@@ -45,6 +46,5 @@ class RideSerializer(serializers.ModelSerializer):
             "dropoff_latitude",
             "dropoff_longitude",
             "pickup_time",
-            "events",
             "todays_ride_events",
         )
