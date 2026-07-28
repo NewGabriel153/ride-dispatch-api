@@ -73,11 +73,32 @@ docker-compose exec api python manage.py createsuperuser
 
 > `createsuperuser` automatically sets `role="admin"` on the new user, so the account it creates can immediately access the admin-only API endpoints.
 
+### A note on the exposed port
+
+The `api` service does **not** bind to a fixed host port. In `docker-compose.yml` it maps a **host port range to the container's port 8000**:
+
+```yaml
+ports:
+  # Host-port range lets multiple replicas bind distinct ports
+  # (first instance -> 8000, next -> 8001, ...). Enables `--scale api=N`.
+  - "8000-8010:8000"
+```
+
+Docker Compose assigns the **first free port in that range** (`8000`–`8010`) to the container, so the port on your machine may not be `8000` — e.g. if `8000` is already in use, or `--scale api=N` starts multiple replicas, the API might come up on `8001`, `8002`, etc. Always check which port was actually assigned with:
+
+```bash
+docker-compose ps
+# or
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+```
+
+Look at the `PORTS` column — it shows the mapping as `0.0.0.0:<host_port>->8000/tcp`. Use `<host_port>` in place of `8000` in every URL below and in the Swagger/curl examples.
+
 ---
 
 ## 4. API Documentation
 
-Once the stack is running, interactive Swagger UI documentation is available at:
+Once the stack is running, interactive Swagger UI documentation is available at (replace `8000` with whatever host port was actually assigned — see above):
 
 ```
 http://localhost:8000/api/docs/
@@ -90,7 +111,7 @@ http://localhost:8000/api/docs/
 The API endpoints are restricted to users whose `role` is `"admin"` (enforced by the `IsAdminRole` permission class). To authenticate:
 
 1. Create an admin user with `python manage.py createsuperuser` (see above) — this sets `role="admin"` automatically.
-2. Log in at the Django admin site, `http://localhost:8000/admin/`, using that superuser's email and password. This establishes an authenticated session cookie.
+2. Log in at the Django admin site, `http://localhost:8000/admin/` (substituting the actual assigned host port — see [A note on the exposed port](#a-note-on-the-exposed-port)), using that superuser's email and password. This establishes an authenticated session cookie.
 3. With that session active, both the Swagger UI and DRF's browsable API will make authenticated requests automatically. Alternatively, HTTP Basic Auth can be used directly against the API, e.g.:
 
 ```bash
