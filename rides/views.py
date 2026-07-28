@@ -4,6 +4,7 @@ from django.db.models import Prefetch, QuerySet
 from django.db.models.expressions import RawSQL
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
 
@@ -26,6 +27,47 @@ HAVERSINE_SQL = """
 """
 
 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="lat",
+                type=float,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "Latitude of the reference point (in [-90, 90]). "
+                    "Must be supplied together with 'lon' to enable "
+                    "distance annotation and 'ordering=distance'."
+                ),
+            ),
+            OpenApiParameter(
+                name="lon",
+                type=float,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "Longitude of the reference point (in [-180, 180]). "
+                    "Must be supplied together with 'lat' to enable "
+                    "distance annotation and 'ordering=distance'."
+                ),
+            ),
+            OpenApiParameter(
+                name="ordering",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "Comma-separated ordering fields. Prefix with '-' for "
+                    "descending. Supported: 'distance', '-distance' "
+                    "(requires 'lat' and 'lon'), 'pickup_time', "
+                    "'-pickup_time'. Defaults to 'pickup_time'."
+                ),
+                enum=["distance", "-distance", "pickup_time", "-pickup_time"],
+            ),
+        ]
+    )
+)
 class RideViewSet(viewsets.ModelViewSet):
     """
     Admin-only CRUD for rides.
